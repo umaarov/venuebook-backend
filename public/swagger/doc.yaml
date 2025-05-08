@@ -1,0 +1,1849 @@
+openapi: 3.0.0
+info:
+  title: Wedding Hall Reservation API
+  version: '1.0.0'
+  description: API for managing wedding halls and reservations.
+servers:
+  - url: /api
+security:
+  - bearerAuth: [ ]
+
+paths:
+  /register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      operationId: auth_register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+                        example: "1|abcdef123456"
+                  message:
+                    type: string
+                    example: User registered successfully
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseValidation'
+  /login:
+    post:
+      tags:
+        - Auth
+      summary: Log in a user
+      operationId: auth_login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+                        example: "1|abcdef123456"
+                  message:
+                    type: string
+                    example: User logged in successfully
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account deactivated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseValidation'
+  /logout:
+    post:
+      tags:
+        - Auth
+      summary: Log out the current user
+      operationId: auth_logout
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: User logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: 'null'
+                    example: null
+                  message:
+                    type: string
+                    example: User logged out successfully
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /profile:
+    get:
+      tags:
+        - User
+      summary: Get current user profile
+      operationId: user_getProfile
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+                  message:
+                    type: string
+                    example: User profile retrieved successfully
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - User
+      summary: Update current user profile
+      operationId: user_updateProfile
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+                  message:
+                    type: string
+                    example: User updated successfully
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseValidation'
+    delete:
+      tags:
+        - User
+      summary: Delete current user profile (only for 'user' role)
+      operationId: user_deleteProfile
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: 'null'
+                    example: null
+                  message:
+                    type: string
+                    example: User deleted successfully
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (Admin and owner accounts cannot be deleted through this endpoint)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /districts:
+    get:
+      tags:
+        - WeddingHalls
+      summary: Get all districts
+      operationId: weddingHall_getDistricts
+      responses:
+        '200':
+          description: Districts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/District'
+                  message:
+                    type: string
+                    example: Districts retrieved successfully
+
+  /wedding-halls:
+    get:
+      tags:
+        - WeddingHalls
+      summary: List wedding halls (filtered by role and status)
+      operationId: weddingHall_index
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: district_id
+          in: query
+          description: Filter by district ID
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          description: Filter by status (admin only, e.g., 'approved', 'pending', 'rejected')
+          required: false
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          description: "Sort by field. Allowed values: `name`, `capacity`, `price_per_seat`, `created_at`"
+          required: false
+          schema:
+            type: string
+            enum: [ name, capacity, price_per_seat, created_at ]
+            default: created_at
+        - name: sort_direction
+          in: query
+          description: "Sort direction. Allowed values: `asc`, `desc`"
+          required: false
+          schema:
+            type: string
+            enum: [ asc, desc ]
+            default: desc
+        - name: per_page
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Wedding halls retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/WeddingHallWithDetails'
+                      message:
+                        type: string
+                        example: Wedding halls retrieved successfully
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - WeddingHalls
+      summary: Create a new wedding hall (Owner or Admin)
+      description: Owners can create wedding halls (status will be 'pending'). Admins can create and optionally assign an owner (status can be 'approved').
+      operationId: weddingHall_store_owner_admin
+      security:
+        - bearerAuth: [ ] # Further restricted by check.owner or check.admin middleware
+      requestBody:
+        required: true
+        content:
+          multipart/form-data: # As images can be uploaded
+            schema:
+              $ref: '#/components/schemas/WeddingHallCreateRequest'
+      responses:
+        '201': # Assuming 201 for successful creation from ApiResponser
+          description: Wedding hall created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WeddingHall'
+                  message:
+                    type: string
+                    example: Wedding hall created successfully
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (Access denied by check.owner or check.admin middleware)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseValidation'
+
+  /wedding-halls/{id}:
+    get:
+      tags:
+        - WeddingHalls
+      summary: Get a specific wedding hall
+      operationId: weddingHall_show
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the wedding hall
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Wedding hall retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      wedding_hall:
+                        $ref: '#/components/schemas/WeddingHallWithDetailsAndImages'
+                      calendar:
+                        type: object
+                        properties:
+                          available_dates:
+                            type: array
+                            items:
+                              type: string
+                              format: date
+                              example: "2025-12-31"
+                          booked_dates:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                date:
+                                  type: string
+                                  format: date
+                                reservation_id:
+                                  type: integer
+                                number_of_guests:
+                                  type: integer
+                                customer_name:
+                                  type: string
+                                customer_surname:
+                                  type: string
+                                customer_phone:
+                                  type: string
+                                user_id:
+                                  type: integer
+                          past_dates:
+                            type: array
+                            items:
+                              type: string
+                              format: date
+                  message:
+                    type: string
+                    example: Wedding hall retrieved successfully
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (User does not have permission to view)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Wedding hall not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - WeddingHalls
+      summary: Update a wedding hall (Owner or Admin)
+      description: Owners can update their own wedding halls. Admins can update any.
+      operationId: weddingHall_update_owner_admin
+      security:
+        - bearerAuth: [ ] # Further restricted by check.owner or check.admin middleware
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the wedding hall
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json: # Typically updates are JSON, not multipart unless changing files
+            schema:
+              $ref: '#/components/schemas/WeddingHallUpdateRequest'
+      responses:
+        '200':
+          description: Wedding hall updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WeddingHall'
+                  message:
+                    type: string
+                    example: Wedding hall updated successfully
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (Access denied or not owner)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Wedding hall not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseValidation'
+
+  /wedding-halls/{id}/images:
+    post:
+      tags:
+        - WeddingHalls
+      summary: Upload an image for a wedding hall (Owner only)
+      operationId: weddingHall_uploadImage
+      security:
+        - bearerAuth: [ ] # Restricted by check.owner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the wedding hall
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: The image file to upload.
+                is_primary:
+                  type: boolean
+                  description: Whether this image should be the primary image.
+                  default: false
+      responses:
+        '200': # Assuming 200/201 from ApiResponser
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WeddingHallImage'
+                  message:
+                    type: string
+                    example: Image uploaded successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Not owner or access denied)
+        '404':
+          description: Wedding hall not found
+        '422':
+          description: Validation error (e.g., file too large, not an image)
+
+  /wedding-halls/images/{imageId}:
+    delete:
+      tags:
+        - WeddingHalls
+      summary: Delete an image of a wedding hall (Owner only)
+      operationId: weddingHall_deleteImage
+      security:
+        - bearerAuth: [ ] # Restricted by check.owner
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          description: ID of the wedding hall image
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Image deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: 'null'
+                  message:
+                    type: string
+                    example: Image deleted successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Not owner or access denied)
+        '404':
+          description: Image not found
+
+  /reservations:
+    get:
+      tags:
+        - Reservations
+      summary: List reservations (filtered by role)
+      operationId: reservation_index
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: wedding_hall_id
+          in: query
+          description: Filter by wedding hall ID
+          required: false
+          schema:
+            type: integer
+        - name: district_id
+          in: query
+          description: Filter by district ID (of the wedding hall)
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          description: "Filter by reservation status (e.g., `booked`, `cancelled`)"
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Search term for wedding hall name or address
+          required: false
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          description: "Sort by field. Allowed values from WeddingHall: `price_per_seat`, `capacity`, `name`, `created_at`. For Reservation: `created_at` is most relevant from this list. Default: `created_at` (of reservation)."
+          required: false
+          schema:
+            type: string
+            enum: [ price_per_seat, capacity, name, created_at ] # As per code, these are wedding hall fields primarily.
+            default: created_at
+        - name: sort_direction
+          in: query
+          description: "Sort direction. Allowed values: `asc`, `desc`"
+          required: false
+          schema:
+            type: string
+            enum: [ asc, desc ]
+            default: desc
+        - name: per_page
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Reservations retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ReservationWithDetails'
+                      message:
+                        type: string
+                        example: Reservations retrieved successfully
+        '401':
+          description: Unauthenticated
+    post:
+      tags:
+        - Reservations
+      summary: Create a new reservation
+      operationId: reservation_store
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationRequest' # Corrected from WeddingHallRequest
+      responses:
+        '201': # Assuming 201 for successful creation
+          description: Reservation created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Reservation'
+                  message:
+                    type: string
+                    example: Reservation created successfully
+        '400':
+          description: Bad request (e.g., hall not available, date booked, capacity exceeded)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthenticated
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseValidation'
+
+  /reservations/{id}:
+    get:
+      tags:
+        - Reservations
+      summary: Get a specific reservation
+      operationId: reservation_show
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the reservation
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reservation retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ReservationWithDetails'
+                  message:
+                    type: string
+                    example: Reservation retrieved successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Not authorized to view this reservation)
+        '404':
+          description: Reservation not found
+
+  /reservations/{id}/cancel:
+    post:
+      tags:
+        - Reservations
+      summary: Cancel a reservation
+      operationId: reservation_cancel
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the reservation
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reservation cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Reservation' # Returns the updated reservation
+                  message:
+                    type: string
+                    example: Reservation cancelled successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Not authorized to cancel this reservation)
+        '404':
+          description: Reservation not found
+
+  /my-reservations:
+    get:
+      tags:
+        - Reservations
+      summary: Get reservations for the authenticated user
+      operationId: reservation_userReservations
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: per_page
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: User reservations retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ReservationWithWeddingHallDistrict'
+                      message:
+                        type: string
+                        example: User reservations retrieved successfully
+        '401':
+          description: Unauthenticated
+
+  # Owner specific routes
+  /owner/wedding-halls:
+    get:
+      tags:
+        - Owner
+      summary: Get wedding halls owned by the authenticated owner
+      operationId: owner_myWeddingHalls
+      security:
+        - bearerAuth: [ ] # Restricted by check.owner middleware
+      responses:
+        '200':
+          description: Wedding halls retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WeddingHallWithDetails'
+                  message:
+                    type: string
+                    example: Wedding halls retrieved successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Access denied by check.owner middleware)
+
+  /owner/reservations:
+    get:
+      tags:
+        - Owner
+      summary: Get reservations for wedding halls owned by the authenticated owner
+      operationId: owner_myReservations
+      security:
+        - bearerAuth: [ ] # Restricted by check.owner middleware
+      parameters:
+        - name: wedding_hall_id
+          in: query
+          description: Filter by specific wedding hall ID owned by the user
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          description: Filter by reservation status (e.g., 'booked', 'cancelled')
+          required: false
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          description: "Sort by field. Allowed values: `reservation_date`, `created_at`, `number_of_guests`"
+          required: false
+          schema:
+            type: string
+            enum: [ reservation_date, created_at, number_of_guests ]
+            default: reservation_date
+        - name: sort_direction
+          in: query
+          description: "Sort direction. Allowed values: `asc`, `desc`"
+          required: false
+          schema:
+            type: string
+            enum: [ asc, desc ]
+            default: asc
+        - name: per_page
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Reservations retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ReservationWithDetails'
+                      message:
+                        type: string
+                        example: Reservations retrieved successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Access denied by check.owner middleware)
+
+  /owner/reservations/{id}/cancel:
+    post:
+      tags:
+        - Owner
+      summary: Cancel a reservation for a wedding hall owned by the authenticated owner
+      operationId: owner_cancelReservation
+      security:
+        - bearerAuth: [ ] # Restricted by check.owner middleware
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the reservation to cancel
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reservation cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Reservation'
+                  message:
+                    type: string
+                    example: Reservation cancelled successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Not owner or access denied)
+        '404':
+          description: Reservation not found
+
+  # Admin specific routes
+  /admin/wedding-halls: # POST is actually WeddingHallController@store
+    post:
+      tags:
+        - Admin - WeddingHalls
+      summary: Create a new wedding hall (Admin)
+      description: Admins can create wedding halls and assign an owner. Status defaults to 'approved'.
+      operationId: admin_weddingHall_store
+      security:
+        - bearerAuth: [ ] # Restricted by check.admin middleware
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WeddingHallCreateRequestAdmin' # Specific for admin
+      responses:
+        '201':
+          description: Wedding hall created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WeddingHall'
+                  message:
+                    type: string
+                    example: Wedding hall created successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Access denied by check.admin middleware)
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseValidation'
+
+  /admin/wedding-halls/{id}: # PUT, DELETE
+    put:
+      tags:
+        - Admin - WeddingHalls
+      summary: Update a wedding hall (Admin)
+      operationId: admin_weddingHall_update
+      security:
+        - bearerAuth: [ ] # Restricted by check.admin middleware
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the wedding hall
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeddingHallUpdateRequestAdmin' # Specific for admin
+      responses:
+        '200':
+          description: Wedding hall updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WeddingHall'
+                  message:
+                    type: string
+                    example: Wedding hall updated successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Access denied by check.admin middleware)
+        '404':
+          description: Wedding hall not found
+        '422':
+          description: Validation error
+    delete:
+      tags:
+        - Admin - WeddingHalls
+      summary: Delete a wedding hall (Admin)
+      operationId: admin_weddingHall_destroy
+      security:
+        - bearerAuth: [ ] # Restricted by check.admin middleware
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the wedding hall
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Wedding hall deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: 'null'
+                  message:
+                    type: string
+                    example: Wedding hall deleted successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Access denied by check.admin middleware)
+        '404':
+          description: Wedding hall not found
+
+  /admin/wedding-halls/{id}/approve:
+    post:
+      tags:
+        - Admin - WeddingHalls
+      summary: Approve a wedding hall (Admin)
+      operationId: admin_approveWeddingHall
+      security:
+        - bearerAuth: [ ] # Restricted by check.admin middleware
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the wedding hall
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Wedding hall approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WeddingHall'
+                  message:
+                    type: string
+                    example: Wedding hall approved successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '404':
+          description: Wedding hall not found
+
+  /admin/wedding-halls/{id}/reject:
+    post:
+      tags:
+        - Admin - WeddingHalls
+      summary: Reject a wedding hall (Admin)
+      operationId: admin_rejectWeddingHall
+      security:
+        - bearerAuth: [ ] # Restricted by check.admin middleware
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the wedding hall
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Wedding hall rejected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WeddingHall'
+                  message:
+                    type: string
+                    example: Wedding hall rejected successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '404':
+          description: Wedding hall not found
+
+  /admin/owners:
+    post:
+      tags:
+        - Admin - Owners
+      summary: Add a new wedding hall owner (Admin)
+      operationId: admin_addOwner
+      security:
+        - bearerAuth: [ ] # Restricted by check.admin middleware
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeddingHallOwnerRequest'
+      responses:
+        '200': # Assuming 200 or 201
+          description: Wedding hall owner created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User' # Returns the created owner User object
+                  message:
+                    type: string
+                    example: Wedding hall owner created successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '422':
+          description: Validation error
+    get:
+      tags:
+        - Admin - Owners
+      summary: List all wedding hall owners (Admin)
+      operationId: admin_listOwners
+      security:
+        - bearerAuth: [ ] # Restricted by check.admin middleware
+      responses:
+        '200':
+          description: Wedding hall owners retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  message:
+                    type: string
+                    example: Wedding hall owners retrieved successfully
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+
+  /admin/associate-owner:
+    post:
+      tags:
+        - Admin - Owners
+      summary: Associate an owner with a wedding hall (Admin)
+      operationId: admin_associateOwner
+      security:
+        - bearerAuth: [ ] # Restricted by check.admin middleware
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - wedding_hall_id
+                - owner_id
+              properties:
+                wedding_hall_id:
+                  type: integer
+                  description: ID of the wedding hall.
+                owner_id:
+                  type: integer
+                  description: ID of the user (must have 'owner' role).
+      responses:
+        '200':
+          description: Owner associated with wedding hall successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WeddingHall' # Returns the updated wedding hall
+                  message:
+                    type: string
+                    example: Owner associated with wedding hall successfully
+        '400':
+          description: Bad request (e.g., user is not an owner)
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '404':
+          description: Wedding hall or Owner not found
+        '422':
+          description: Validation error
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: John
+        surname:
+          type: string
+          nullable: true
+          example: Doe
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        phone:
+          type: string
+          nullable: true
+          example: "+1234567890"
+        role:
+          type: string
+          enum: [ user, owner, admin ]
+          example: user
+        is_active:
+          type: boolean
+          example: true
+        email_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    District:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Central District"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    WeddingHallImage:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        wedding_hall_id:
+          type: integer
+          example: 1
+        image_path:
+          type: string
+          example: "wedding-halls/image.jpg"
+        is_primary:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    WeddingHall:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Grand Ballroom"
+        district_id:
+          type: integer
+          example: 1
+        address:
+          type: string
+          example: "123 Main St, Anytown"
+        capacity:
+          type: integer
+          example: 200
+        price_per_seat:
+          type: number
+          format: float # decimal(2)
+          example: 50.00
+        phone:
+          type: string
+          example: "+9876543210"
+        owner_id:
+          type: integer
+          nullable: true
+          example: 2
+        status:
+          type: string
+          enum: [ pending, approved, rejected ]
+          example: approved
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    WeddingHallWithDetails: # Extends WeddingHall for list/get responses
+      allOf:
+        - $ref: '#/components/schemas/WeddingHall'
+        - type: object
+          properties:
+            district:
+              $ref: '#/components/schemas/District'
+            primaryImage: # Corrected from primary_image
+              $ref: '#/components/schemas/WeddingHallImage'
+              nullable: true
+            owner:
+              $ref: '#/components/schemas/User'
+              nullable: true
+    WeddingHallWithDetailsAndImages: # For WeddingHall Show
+      allOf:
+        - $ref: '#/components/schemas/WeddingHallWithDetails'
+        - type: object
+          properties:
+            images:
+              type: array
+              items:
+                $ref: '#/components/schemas/WeddingHallImage'
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        wedding_hall_id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        reservation_date:
+          type: string
+          format: date
+          example: "2025-12-24"
+        number_of_guests:
+          type: integer
+          example: 150
+        customer_name:
+          type: string
+          example: "Alice"
+        customer_surname:
+          type: string
+          example: "Smith"
+        customer_phone:
+          type: string
+          example: "+1122334455"
+        total_price:
+          type: number
+          format: float # decimal(2)
+          example: 7500.00
+        status:
+          type: string
+          enum: [ booked, cancelled, completed ] # Assuming 'completed' might be a status
+          example: booked
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ReservationWithDetails: # For list/get responses
+      allOf:
+        - $ref: '#/components/schemas/Reservation'
+        - type: object
+          properties:
+            wedding_hall:
+              $ref: '#/components/schemas/WeddingHallWithDetails' # Includes district
+            user:
+              $ref: '#/components/schemas/User'
+    ReservationWithWeddingHallDistrict: # For /my-reservations
+      allOf:
+        - $ref: '#/components/schemas/Reservation'
+        - type: object
+          properties:
+            wedding_hall:
+              type: object # Simplified for this specific response
+              properties:
+                id:
+                  type: integer
+                name:
+                  type: string
+                district:
+                  $ref: '#/components/schemas/District'
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - username
+        - email
+        - password
+        - password_confirmation
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        surname:
+          type: string
+          maxLength: 255
+          nullable: true
+        username:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          maxLength: 20
+          nullable: true
+        password:
+          type: string
+          format: password
+          minLength: 8
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    UserUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        surname:
+          type: string
+          maxLength: 255
+          nullable: true
+        username:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          maxLength: 20
+          nullable: true
+        password:
+          type: string
+          format: password
+          minLength: 8
+          nullable: true
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+          nullable: true
+    WeddingHallOwnerRequest: # For AdminController@addOwner
+      type: object
+      required:
+        - name
+        - surname
+        - username
+        - email
+        - phone
+        - password
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        surname:
+          type: string
+          maxLength: 255
+        username:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          maxLength: 20
+        password:
+          type: string
+          minLength: 8
+    WeddingHallCreateRequest: # For WeddingHallController@store (Owner/User with 'owner' intent via admin)
+      type: object
+      required:
+        - name
+        - district_id
+        - address
+        - capacity
+        - price_per_seat
+        - phone
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        district_id:
+          type: integer
+        address:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        price_per_seat:
+          type: number
+          format: float
+          minimum: 0
+        phone:
+          type: string
+          maxLength: 20
+        images: # For multipart/form-data
+          type: array
+          items:
+            type: string
+            format: binary # File upload
+          nullable: true
+          description: Array of image files.
+        primary_image: # Index of the primary image in the 'images' array
+          type: integer
+          minimum: 0
+          nullable: true
+          description: "Index of the image in the 'images' array to be marked as primary. E.g., 0 for the first image."
+    WeddingHallCreateRequestAdmin: # For Admin creating WeddingHall
+      allOf:
+        - $ref: '#/components/schemas/WeddingHallCreateRequest'
+        - type: object
+          properties:
+            owner_id: # Admin can assign owner
+              type: integer
+              nullable: true
+              description: ID of the user to be assigned as owner.
+    WeddingHallUpdateRequest: # For PUT /wedding-halls/{id}
+      type: object
+      properties: # All fields are optional on update
+        name:
+          type: string
+          maxLength: 255
+        district_id:
+          type: integer
+        address:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        price_per_seat:
+          type: number
+          format: float
+          minimum: 0
+        phone:
+          type: string
+          maxLength: 20
+    WeddingHallUpdateRequestAdmin: # For Admin updating WeddingHall
+      allOf:
+        - $ref: '#/components/schemas/WeddingHallUpdateRequest'
+        - type: object
+          properties:
+            owner_id:
+              type: integer
+              nullable: true
+            status:
+              type: string
+              enum: [ pending, approved, rejected ]
+    ReservationRequest:
+      type: object
+      required:
+        - wedding_hall_id
+        - reservation_date
+        - number_of_guests
+      properties:
+        wedding_hall_id:
+          type: integer
+        reservation_date:
+          type: string
+          format: date # YYYY-MM-DD
+          description: Must be today or a future date.
+        number_of_guests:
+          type: integer
+          minimum: 1
+        customer_name: # Auto-filled if not provided by authenticated user
+          type: string
+          maxLength: 255
+          nullable: true
+        customer_surname: # Auto-filled if not provided
+          type: string
+          maxLength: 255
+          nullable: true
+        customer_phone: # Auto-filled if not provided
+          type: string
+          maxLength: 20
+          nullable: true
+
+    PaginatedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        # data: defined in specific responses using this
+        message:
+          type: string
+        meta: # Common pagination meta structure
+          type: object
+          properties:
+            current_page:
+              type: integer
+              example: 1
+            from:
+              type: integer
+              example: 1
+            last_page:
+              type: integer
+              example: 5
+            links:
+              type: array
+              items:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    nullable: true
+                    example: "http://localhost/api/wedding-halls?page=1"
+                  label:
+                    type: string
+                    example: "1"
+                  active:
+                    type: boolean
+                    example: true
+            path:
+              type: string
+              example: "http://localhost/api/wedding-halls"
+            per_page:
+              type: integer
+              example: 10
+            to:
+              type: integer
+              example: 10
+            total:
+              type: integer
+              example: 50
+        links: # Common pagination links structure
+          type: object
+          properties:
+            first:
+              type: string
+              example: "http://localhost/api/wedding-halls?page=1"
+            last:
+              type: string
+              example: "http://localhost/api/wedding-halls?page=5"
+            prev:
+              type: string
+              nullable: true
+              example: null
+            next:
+              type: string
+              nullable: true
+              example: "http://localhost/api/wedding-halls?page=2"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "An error occurred."
+    ErrorResponseValidation:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+              example:
+                email: [ "The email field is required." ]
+                password: [ "The password must be at least 8 characters." ]
