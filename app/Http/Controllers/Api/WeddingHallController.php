@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ReservationRequest;
 use App\Http\Requests\WeddingHallRequest;
 use App\Models\District;
 use App\Models\Reservation;
@@ -29,18 +30,13 @@ class WeddingHallController extends Controller
     {
         $query = WeddingHall::with(['district', 'primaryImage', 'owner']);
 
-        // Apply role-based filters
         if (auth()->user()->role === 'admin') {
-            // Admin can see all wedding halls
         } elseif (auth()->user()->role === 'owner') {
-            // Owners can see only their own wedding halls
             $query->where('owner_id', auth()->id());
         } else {
-            // Users can see only approved wedding halls
             $query->approved();
         }
 
-        // Apply filters
         if ($request->has('district_id')) {
             $query->where('district_id', $request->district_id);
         }
@@ -49,7 +45,6 @@ class WeddingHallController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Apply sorting
         $sortBy = $request->sort_by ?? 'reservation_date';
         $sortDirection = $request->sort_direction ?? 'asc';
 
@@ -66,12 +61,10 @@ class WeddingHallController extends Controller
     {
         $weddingHall = WeddingHall::findOrFail($request->wedding_hall_id);
 
-        // Check if wedding hall is approved
         if ($weddingHall->status !== 'approved') {
             return $this->error('Wedding hall is not available for booking', 400);
         }
 
-        // Check if date is already booked
         $existingReservation = Reservation::where('wedding_hall_id', $request->wedding_hall_id)
             ->where('reservation_date', $request->reservation_date)
             ->where('status', 'booked')
@@ -81,7 +74,6 @@ class WeddingHallController extends Controller
             return $this->error('This date is already booked', 400);
         }
 
-        // Check capacity
         if ($request->number_of_guests > $weddingHall->capacity) {
             return $this->error('Number of guests exceeds the wedding hall capacity', 400);
         }
@@ -95,7 +87,6 @@ class WeddingHallController extends Controller
     {
         $reservation = Reservation::with(['weddingHall.district', 'user'])->findOrFail($id);
 
-        // Check if user has permission to view
         if (auth()->user()->role === 'owner') {
             if ($reservation->weddingHall->owner_id !== auth()->id()) {
                 return $this->error('You do not have permission to view this reservation', 403);
@@ -113,7 +104,6 @@ class WeddingHallController extends Controller
     {
         $reservation = Reservation::findOrFail($id);
 
-        // Check if user has permission to cancel
         if (auth()->user()->role === 'owner') {
             if ($reservation->weddingHall->owner_id !== auth()->id()) {
                 return $this->error('You do not have permission to cancel this reservation', 403);

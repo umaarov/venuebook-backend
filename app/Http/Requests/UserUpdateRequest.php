@@ -7,12 +7,12 @@ use Illuminate\Validation\Rule;
 
 class UserUpdateRequest extends FormRequest
 {
-    public function authorize()
+    public function authorize(): true
     {
         return true;
     }
 
-    public function rules()
+    public function rules(): array
     {
         return [
             'name' => 'sometimes|string|max:255',

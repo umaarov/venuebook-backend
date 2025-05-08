@@ -4,7 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\Response as ResponseAlias;
 
 class CheckOwner
 {
@@ -14,7 +14,7 @@ class CheckOwner
             return response()->json([
                 'success' => false,
                 'message' => 'Access denied. Wedding hall owner privileges required.',
-            ], Response::HTTP_FORBIDDEN);
+            ], ResponseAlias::HTTP_FORBIDDEN);
         }
 
         return $next($request);

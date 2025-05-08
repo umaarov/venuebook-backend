@@ -22,12 +22,10 @@ class WeddingHallRequest extends FormRequest
             'phone' => 'required|string|max:20',
         ];
 
-        // Only admin can set owner directly when creating a hall
         if (auth()->user()->role === 'admin') {
             $rules['owner_id'] = 'nullable|exists:users,id';
         }
 
-        // Only allow image upload during creation
         if ($this->isMethod('post')) {
             $rules['images'] = 'nullable|array';
             $rules['images.*'] = 'image|max:2048';

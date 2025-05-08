@@ -10,6 +10,7 @@ use App\Models\WeddingHall;
 use App\Models\WeddingHallImage;
 use App\Services\ReservationService;
 use App\Traits\ApiResponser;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -25,7 +26,7 @@ class ReservationController extends Controller
         $this->reservationService = $reservationService;
     }
 
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = Reservation::with(['weddingHall.district', 'user']);
 

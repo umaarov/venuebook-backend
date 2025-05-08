@@ -7,6 +7,7 @@ use App\Http\Requests\WeddingHallOwnerRequest;
 use App\Models\User;
 use App\Models\WeddingHall;
 use App\Traits\ApiResponser;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -14,7 +15,7 @@ class AdminController extends Controller
 {
     use ApiResponser;
 
-    public function addOwner(WeddingHallOwnerRequest $request)
+    public function addOwner(WeddingHallOwnerRequest $request): JsonResponse
     {
         $owner = User::create([
             'name' => $request->name,
@@ -29,7 +30,7 @@ class AdminController extends Controller
         return $this->success($owner, 'Wedding hall owner created successfully');
     }
 
-    public function associateOwner(Request $request)
+    public function associateOwner(Request $request): JsonResponse
     {
         $request->validate([
             'wedding_hall_id' => 'required|exists:wedding_halls,id',
@@ -49,7 +50,7 @@ class AdminController extends Controller
         return $this->success($weddingHall, 'Owner associated with wedding hall successfully');
     }
 
-    public function approveWeddingHall($id)
+    public function approveWeddingHall($id): JsonResponse
     {
         $weddingHall = WeddingHall::findOrFail($id);
         $weddingHall->status = 'approved';
@@ -58,7 +59,7 @@ class AdminController extends Controller
         return $this->success($weddingHall, 'Wedding hall approved successfully');
     }
 
-    public function rejectWeddingHall($id)
+    public function rejectWeddingHall($id): JsonResponse
     {
         $weddingHall = WeddingHall::findOrFail($id);
         $weddingHall->status = 'rejected';
@@ -67,7 +68,7 @@ class AdminController extends Controller
         return $this->success($weddingHall, 'Wedding hall rejected successfully');
     }
 
-    public function listOwners()
+    public function listOwners(): JsonResponse
     {
         $owners = User::where('role', 'owner')->get();
         return $this->success($owners, 'Wedding hall owners retrieved successfully');

@@ -4,7 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\Response as ResponseAlias;
 
 class CheckAdmin
 {
@@ -14,7 +14,7 @@ class CheckAdmin
             return response()->json([
                 'success' => false,
                 'message' => 'Access denied. Admin privileges required.',
-            ], Response::HTTP_FORBIDDEN);
+            ], ResponseAlias::HTTP_FORBIDDEN);
         }
 
         return $next($request);

@@ -28,7 +28,6 @@ class WeddingHallOwnerController extends Controller
                 $query->where('owner_id', auth()->id());
             });
 
-        // Apply filters
         if ($request->has('wedding_hall_id')) {
             $query->where('wedding_hall_id', $request->wedding_hall_id);
         }
@@ -37,7 +36,6 @@ class WeddingHallOwnerController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Apply sorting
         $sortBy = $request->sort_by ?? 'reservation_date';
         $sortDirection = $request->sort_direction ?? 'asc';
 
