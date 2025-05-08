@@ -4,16 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReservationRequest;
-use App\Http\Requests\WeddingHallRequest;
 use App\Models\District;
 use App\Models\Reservation;
 use App\Models\WeddingHall;
-use App\Models\WeddingHallImage;
 use App\Services\WeddingHallService;
 use App\Traits\ApiResponser;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class WeddingHallController extends Controller
 {
@@ -98,6 +94,12 @@ class WeddingHallController extends Controller
         }
 
         return $this->success($reservation, 'Reservation retrieved successfully');
+    }
+
+    public function getDistricts()
+    {
+        $districts = District::all();
+        return $this->success($districts, 'Districts retrieved successfully');
     }
 
     public function cancel($id)

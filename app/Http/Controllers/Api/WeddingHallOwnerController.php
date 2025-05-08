@@ -52,7 +52,6 @@ class WeddingHallOwnerController extends Controller
     {
         $reservation = Reservation::with('weddingHall')->findOrFail($id);
 
-        // Ensure owner owns the wedding hall
         if ($reservation->weddingHall->owner_id !== auth()->id()) {
             return $this->error('You do not have permission to cancel this reservation', 403);
         }
