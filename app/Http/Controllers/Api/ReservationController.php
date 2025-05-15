@@ -19,7 +19,7 @@ class ReservationController extends Controller
 {
     use ApiResponser;
 
-    protected $reservationService;
+    protected ReservationService $reservationService;
 
     public function __construct(ReservationService $reservationService)
     {
