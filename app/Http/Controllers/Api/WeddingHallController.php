@@ -69,11 +69,17 @@ class WeddingHallController extends Controller
         $validatedData = $request->validated();
         $images = $request->file('images');
         $primaryImageIndexInput = $request->input('primary_image');
+        $hallCreationData = collect($validatedData)->except(['images', 'primary_image', 'owner_id'])->toArray();
+
+        $ownerIdToSet = Auth::id();
+        if (Auth::user()->role === 'admin' && isset($validatedData['owner_id'])) {
+            $ownerIdToSet = $validatedData['owner_id'];
+        }
 
         try {
             $weddingHall = $this->weddingHallService->createWeddingHall(
-                collect($validatedData)->except(['images', 'primary_image'])->toArray(),
-                Auth::id(),
+                $hallCreationData,
+                $ownerIdToSet,
                 $images,
                 $primaryImageIndexInput !== null ? (int)$primaryImageIndexInput : null
             );
