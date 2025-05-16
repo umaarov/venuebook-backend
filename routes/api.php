@@ -45,6 +45,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/admin/wedding-halls/{id}', [WeddingHallController::class, 'destroy']);
         Route::post('/admin/wedding-halls/{id}/approve', [AdminController::class, 'approveWeddingHall']);
         Route::post('/admin/wedding-halls/{id}/reject', [AdminController::class, 'rejectWeddingHall']);
+        Route::get('/admin/reservations', [AdminController::class, 'listAllReservations']);
+        Route::post('/admin/reservations/{id}/cancel', [AdminController::class, 'cancelReservation']);
+
 
         Route::post('/admin/owners', [AdminController::class, 'addOwner']);
         Route::post('/admin/associate-owner', [AdminController::class, 'associateOwner']);
