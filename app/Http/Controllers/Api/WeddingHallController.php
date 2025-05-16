@@ -3,26 +3,29 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ReservationRequest;
+use App\Http\Requests\WeddingHallRequest;
 use App\Models\District;
 use App\Models\Reservation;
 use App\Models\WeddingHall;
 use App\Services\WeddingHallService;
 use App\Traits\ApiResponser;
+use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WeddingHallController extends Controller
 {
     use ApiResponser;
 
-    protected $weddingHallService;
+    protected WeddingHallService $weddingHallService;
 
     public function __construct(WeddingHallService $weddingHallService)
     {
         $this->weddingHallService = $weddingHallService;
     }
 
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = WeddingHall::with(['district', 'primaryImage', 'owner']);
 
@@ -53,33 +56,34 @@ class WeddingHallController extends Controller
         return $this->success($reservations, 'Reservations retrieved successfully');
     }
 
-    public function store(ReservationRequest $request)
+    public function store(WeddingHallRequest $request)
     {
-        $weddingHall = WeddingHall::findOrFail($request->wedding_hall_id);
+        $validatedData = $request->validated();
 
-        if ($weddingHall->status !== 'approved') {
-            return $this->error('Wedding hall is not available for booking', 400);
+        $images = $request->file('images');
+        $primaryImageIndexInput = $request->input('primary_image');
+
+        $hallCreationData = collect($validatedData)->except(['images', 'primary_image'])->toArray();
+
+        try {
+            $weddingHall = $this->weddingHallService->createWeddingHall(
+                $hallCreationData,
+                auth()->id(),
+                $images,
+                $primaryImageIndexInput !== null ? (int)$primaryImageIndexInput : null
+            );
+
+            $weddingHall->load(['district', 'primaryImage', 'owner']);
+
+            return $this->success($weddingHall, 'Wedding hall created successfully and is pending approval.');
+
+        } catch (Exception $e) {
+            Log::error('WeddingHallController@store Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return $this->error('Failed to create wedding hall due to a server error.', 500);
         }
-
-        $existingReservation = Reservation::where('wedding_hall_id', $request->wedding_hall_id)
-            ->where('reservation_date', $request->reservation_date)
-            ->where('status', 'booked')
-            ->first();
-
-        if ($existingReservation) {
-            return $this->error('This date is already booked', 400);
-        }
-
-        if ($request->number_of_guests > $weddingHall->capacity) {
-            return $this->error('Number of guests exceeds the wedding hall capacity', 400);
-        }
-
-        $reservation = $this->reservationService->createReservation($request, $weddingHall);
-
-        return $this->success($reservation, 'Reservation created successfully');
     }
 
-    public function show($id)
+    public function show($id): JsonResponse
     {
         $reservation = Reservation::with(['weddingHall.district', 'user'])->findOrFail($id);
 
@@ -122,7 +126,7 @@ class WeddingHallController extends Controller
         return $this->success($reservation, 'Reservation cancelled successfully');
     }
 
-    public function userReservations()
+    public function userReservations(): JsonResponse
     {
         $reservations = Reservation::with(['weddingHall.district'])
             ->where('user_id', auth()->id())

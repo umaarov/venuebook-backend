@@ -11,6 +11,7 @@ class WeddingHallRequest extends FormRequest
         return true;
     }
 
+    // WeddingHallRequest.php
     public function rules()
     {
         $rules = [
@@ -31,7 +32,6 @@ class WeddingHallRequest extends FormRequest
             $rules['images.*'] = 'image|max:2048';
             $rules['primary_image'] = 'nullable|integer|min:0';
         }
-
         return $rules;
     }
 }

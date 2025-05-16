@@ -4,59 +4,54 @@ namespace App\Services;
 
 use App\Models\WeddingHall;
 use App\Models\WeddingHallImage;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class WeddingHallService
 {
-    public function createWeddingHall(Request $request)
+    public function createWeddingHall(array $data, int $ownerId, ?array $imageFiles = null, ?int $primaryImageIndex = null): WeddingHall
     {
         DB::beginTransaction();
 
         try {
-            $weddingHallData = [
-                'name' => $request->name,
-                'district_id' => $request->district_id,
-                'address' => $request->address,
-                'capacity' => $request->capacity,
-                'price_per_seat' => $request->price_per_seat,
-                'phone' => $request->phone,
-                'status' => auth()->user()->role === 'admin' ? 'approved' : 'pending',
-            ];
+            // Use the $data array directly
+            $weddingHallData = $data; // $data already contains name, district_id, address, etc.
 
-            // If user is an owner, set owner_id to the authenticated user
-            if (auth()->user()->role === 'owner') {
-                $weddingHallData['owner_id'] = auth()->id();
-            }
-            // If user is an admin and owner_id is provided
-            elseif (auth()->user()->role === 'admin' && $request->has('owner_id')) {
-                $weddingHallData['owner_id'] = $request->owner_id;
-            }
+            $weddingHallData['owner_id'] = $ownerId;
+            $weddingHallData['status'] = (Auth::user() && Auth::user()->role === 'admin' && isset($data['status'])) ? $data['status'] : 'pending';
+            // If an admin is creating AND explicitly setting a status for another owner. Otherwise, default to pending.
+            // If an admin can also create for themselves, owner_id might come from $data['owner_id'] if validated & present, or default to Auth::id()
 
             $weddingHall = WeddingHall::create($weddingHallData);
 
-            // Handle image uploads if any
-            if ($request->hasFile('images')) {
-                $primaryImageIndex = $request->primary_image ?? 0;
+            // Handle image uploads if any (using $imageFiles and $primaryImageIndex)
+            if ($imageFiles) {
+                foreach ($imageFiles as $index => $imageFile) {
+                    // Ensure $imageFile is an UploadedFile instance
+                    if ($imageFile instanceof UploadedFile && $imageFile->isValid()) {
+                        $path = $imageFile->store('wedding-halls', 'public'); // Store the file
 
-                foreach ($request->file('images') as $index => $image) {
-                    $path = $image->store('wedding-halls', 'public');
-
-                    WeddingHallImage::create([
-                        'wedding_hall_id' => $weddingHall->id,
-                        'image_path' => $path,
-                        'is_primary' => $index === (int)$primaryImageIndex,
-                    ]);
+                        WeddingHallImage::create([
+                            'wedding_hall_id' => $weddingHall->id,
+                            'image_path' => $path,
+                            'is_primary' => $primaryImageIndex !== null && $index === $primaryImageIndex,
+                        ]);
+                    }
                 }
             }
 
             DB::commit();
 
             return $weddingHall;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
-            throw $e;
+            // Log the error before re-throwing or handle it
+            Log::error('Error in WeddingHallService@createWeddingHall: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            throw $e; // Re-throw to be caught by controller or Laravel's handler
         }
     }
 
@@ -102,6 +97,20 @@ class WeddingHallService
         $weddingHall->update($weddingHallData);
 
         return $weddingHall;
+    }
+
+    public function storeImages(WeddingHall $weddingHall, array $imageFiles, ?int $primaryImageIndex = null): void
+    {
+        foreach ($imageFiles as $index => $imageFile) {
+            if ($imageFile instanceof UploadedFile && $imageFile->isValid()) {
+                $path = $imageFile->store('wedding-halls', 'public');
+                WeddingHallImage::create([
+                    'wedding_hall_id' => $weddingHall->id,
+                    'image_path' => $path,
+                    'is_primary' => $primaryImageIndex !== null && $index === $primaryImageIndex,
+                ]);
+            }
+        }
     }
 }
 
