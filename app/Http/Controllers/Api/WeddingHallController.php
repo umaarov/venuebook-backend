@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WeddingHallRequest;
 use App\Models\District;
+use App\Models\Reservation;
 use App\Models\WeddingHall;
 use App\Models\WeddingHallImage;
 use App\Services\WeddingHallService;
@@ -99,12 +100,42 @@ class WeddingHallController extends Controller
     {
         $weddingHall = WeddingHall::with(['district', 'images', 'owner'])->findOrFail($id);
 
-        if (!Auth::check() || (Auth::user()->role !== 'admin' && Auth::id() !== $weddingHall->owner_id)) {
+        $user = Auth::user();
+        if (!$user || ($user->role !== 'admin' && $user->id !== $weddingHall->owner_id)) {
             if ($weddingHall->status !== 'approved') {
                 return $this->error('This wedding hall is not currently available.', 403);
             }
         }
-        return $this->success($weddingHall, 'Wedding hall retrieved successfully');
+
+        $bookedReservations = Reservation::where('wedding_hall_id', $id)
+            ->where('status', 'booked')
+            // ->where('reservation_date', '>=', Carbon::today()->toDateString())
+            // ->where('reservation_date', '<=', Carbon::today()->addYear()->toDateString())
+            ->with('user:id,name,username')
+            ->get(['id', 'reservation_date', 'number_of_guests', 'customer_name', 'customer_surname', 'user_id']);
+
+        $calendarData = [
+            'booked_dates' => [],
+        ];
+
+        foreach ($bookedReservations as $reservation) {
+            $calendarData['booked_dates'][] = [
+                'date' => $reservation->reservation_date,
+                'reservation_id' => $reservation->id,
+                'number_of_guests' => $reservation->number_of_guests,
+                'customer_name' => $reservation->customer_name,
+                'customer_surname' => $reservation->customer_surname,
+                'booked_by_username' => $reservation->user ? $reservation->user->username : 'N/A',
+                'booked_by_user_id' => $reservation->user_id,
+            ];
+        }
+
+        $responseData = [
+            'wedding_hall' => $weddingHall,
+            'calendar_booked_dates' => $calendarData['booked_dates'],
+        ];
+
+        return $this->success($responseData, 'Wedding hall and calendar data retrieved successfully');
     }
 
     public function update(WeddingHallRequest $request, $id)

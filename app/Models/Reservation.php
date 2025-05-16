@@ -27,7 +27,7 @@ class Reservation extends Model
         'total_price' => 'decimal:2',
     ];
 
-    public function weddingHall()
+    public function weddingHall(): BelongsTo
     {
         return $this->belongsTo(WeddingHall::class);
     }
