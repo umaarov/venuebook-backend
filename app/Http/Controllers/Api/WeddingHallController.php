@@ -20,7 +20,7 @@ class WeddingHallController extends Controller
 {
     use ApiResponser;
 
-    protected $weddingHallService;
+    protected WeddingHallService $weddingHallService;
 
     public function __construct(WeddingHallService $weddingHallService)
     {
@@ -30,31 +30,35 @@ class WeddingHallController extends Controller
     public function index(Request $request)
     {
         $query = WeddingHall::with(['district', 'primaryImage', 'owner']);
+        $user = Auth::user();
 
-        if (Auth::check()) {
-            $user = Auth::user();
-            if ($user->role === 'owner') {
+        if ($user) {
+            if ($user->role === 'admin') {
+                if ($request->has('status') && in_array($request->status, ['pending', 'approved', 'rejected'])) {
+                    $query->where('status', $request->status);
+                }
+            } elseif ($user->role === 'owner') {
                 $query->where('owner_id', $user->id);
-            } elseif ($user->role !== 'admin') {
-                $query->approved();
+                if ($request->has('status') && in_array($request->status, ['pending', 'approved', 'rejected'])) {
+                    $query->where('status', $request->status);
+                }
+            } else {
+                $query->where('status', 'approved');
             }
         } else {
-            $query->approved();
+            $query->where('status', 'approved');
         }
 
-        if ($request->has('district_id')) {
+        if ($request->has('district_id') && !empty($request->district_id)) {
             $query->where('district_id', $request->district_id);
         }
-        if (Auth::check() && Auth::user()->role === 'admin' && $request->has('status')) {
-            $query->where('status', $request->status);
-        }
 
+        $validSortColumns = ['name', 'capacity', 'price_per_seat', 'created_at', 'status'];
         $sortBy = $request->input('sort_by', 'created_at');
         $sortDirection = $request->input('sort_direction', 'desc');
-        $validSortColumns = ['name', 'capacity', 'price_per_seat', 'address', 'created_at'];
 
         if (in_array($sortBy, $validSortColumns)) {
-            $query->orderBy($sortBy, $sortDirection);
+            $query->orderBy($sortBy, $sortDirection === 'desc' ? 'desc' : 'asc');
         } else {
             $query->orderBy('created_at', 'desc');
         }
