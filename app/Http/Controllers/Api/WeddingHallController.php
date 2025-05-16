@@ -111,22 +111,20 @@ class WeddingHallController extends Controller
             return $this->error('You do not have permission to update this wedding hall.', 403);
         }
 
-        $validatedData = $request->validated();
-        $newImages = $request->file('new_images');
-        $primaryImageIndexInput = $request->input('primary_image');
-
         try {
-            $updatedWeddingHall = $this->weddingHallService->updateWeddingHall(
-                $weddingHall,
-                collect($validatedData)->except(['new_images', 'primary_image'])->toArray(),
-                $newImages,
-                $primaryImageIndexInput !== null ? (int)$primaryImageIndexInput : null
-            );
-            $updatedWeddingHall->load(['district', 'images', 'owner']);
+            $updatedWeddingHall = $this->weddingHallService->updateWeddingHall($weddingHall, $request);
+
+            $updatedWeddingHall->load(['district', 'images', 'owner', 'primaryImage']);
+
             return $this->success($updatedWeddingHall, 'Wedding hall updated successfully.');
+
         } catch (Exception $e) {
-            Log::error('WeddingHallController@update Error: ' . $e->getMessage());
-            return $this->error('Failed to update wedding hall.', 500);
+            Log::error('WeddingHallController@update Error: ' . $e->getMessage(), [
+                'wedding_hall_id' => $id,
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->error('Failed to update wedding hall due to a server error: ' . $e->getMessage(), 500);
         }
     }
 
