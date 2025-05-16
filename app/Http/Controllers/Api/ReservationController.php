@@ -62,32 +62,39 @@ class ReservationController extends Controller
 
     public function store(ReservationRequest $request)
     {
-        $validatedData = $request->validated();
-        $weddingHall = WeddingHall::findOrFail($validatedData['wedding_hall_id']);
+
+        $weddingHall = WeddingHall::findOrFail($request->input('wedding_hall_id'));
 
         if ($weddingHall->status !== 'approved') {
-            return $this->error('Selected wedding hall is not available for booking.', 400);
+            return $this->error('Selected wedding hall is not currently available for booking.', 400);
         }
 
-        $existingReservation = Reservation::where('wedding_hall_id', $validatedData['wedding_hall_id'])
-            ->where('reservation_date', $validatedData['reservation_date'])
+        $existingReservation = Reservation::where('wedding_hall_id', $request->input('wedding_hall_id'))
+            ->where('reservation_date', $request->input('reservation_date'))
             ->where('status', 'booked')
             ->first();
 
         if ($existingReservation) {
-            return $this->error('This date and time slot is already booked for the selected hall.', 400);
+            return $this->error('This date (and potentially time slot) is already booked for the selected hall.', 400);
         }
 
-        if (isset($validatedData['number_of_guests']) && $validatedData['number_of_guests'] > $weddingHall->capacity) {
+        if ($request->input('number_of_guests') > $weddingHall->capacity) {
             return $this->error('Number of guests exceeds the wedding hall capacity.', 400);
         }
 
         try {
-            $reservation = $this->reservationService->createReservation($validatedData, Auth::user(), $weddingHall);
+            $reservation = $this->reservationService->createReservation($request, $weddingHall);
+
+            $reservation->load(['weddingHall.district', 'user']);
+
             return $this->success($reservation, 'Reservation created successfully.');
+
         } catch (Exception $e) {
-            Log::error('ReservationController@store Error: ' . $e->getMessage());
-            return $this->error($e->getMessage(), 500);
+            Log::error('ReservationController@store Error: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->error('Failed to create reservation due to a server error. Please try again later.', 500);
         }
     }
 
