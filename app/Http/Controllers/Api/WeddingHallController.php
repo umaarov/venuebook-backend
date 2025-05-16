@@ -10,6 +10,7 @@ use App\Models\WeddingHall;
 use App\Models\WeddingHallImage;
 use App\Services\WeddingHallService;
 use App\Traits\ApiResponser;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -120,7 +121,7 @@ class WeddingHallController extends Controller
 
         foreach ($bookedReservations as $reservation) {
             $calendarData['booked_dates'][] = [
-                'date' => $reservation->reservation_date,
+                'date' => Carbon::parse($reservation->reservation_date)->format('Y-m-d'),
                 'reservation_id' => $reservation->id,
                 'number_of_guests' => $reservation->number_of_guests,
                 'customer_name' => $reservation->customer_name,
