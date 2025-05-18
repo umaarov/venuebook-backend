@@ -25,8 +25,9 @@ jobs:
       - name: Prepare deployment package
         run: |
           mkdir -p deploy/.ebextensions
-          cp -r .ebextensions/* deploy/.ebextensions/ || true
-          zip -r deploy/venuebook-backend.zip . -x ".git/*" ".github/*" "node_modules/*" "tests/*" "storage/logs/*" "*.md" "*.lock"
+          cp -r .ebextensions deploy/.ebextensions || true
+          zip -r deploy/venuebook-backend.zip . \
+            -x ".git/*" ".github/*" "node_modules/*" "storage/logs/*" "*.md" "*.lock" "vendor/*"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
