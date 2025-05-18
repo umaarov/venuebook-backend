@@ -27,9 +27,9 @@ jobs:
 
       - name: Create deployment artifact
         run: |
-          zip -r venuebook-backend.zip . -x ".git/*" ".github/*" "node_modules/*" "vendor/*" "*.md" "*.lock"
+          zip -r venuebook-backend-storage.zip . -x ".git/*" ".github/*" "node_modules/*" "vendor/*" "*.md" "*.lock"
           mkdir -p deploy
-          mv venuebook-backend.zip deploy/
+          mv venuebook-backend-storage.zip deploy/
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -43,8 +43,8 @@ jobs:
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name: venuebook-backend
-          environment_name: venuebook-backend-env
+          application_name: venuebook-backend-storage
+          environment_name: venuebook-backend-storage-env
           version_label: ${{ github.sha }}
           region: us-east-1
-          deployment_package: deploy/venuebook-backend.zip
+          deployment_package: deploy/venuebook-backend-storage.zip
