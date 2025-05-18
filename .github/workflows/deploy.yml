@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,11 +22,11 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader
 
-      - name: Create deployment artifact
+      - name: Prepare deployment package
         run: |
-          zip -r venuebook-backend.zip . -x ".git/*" ".github/*" "node_modules/*" "*.md" "*.lock"
-          mkdir -p deploy
-          mv venuebook-backend.zip deploy/
+          mkdir -p deploy/.ebextensions
+          cp -r .ebextensions/* deploy/.ebextensions/ || true
+          zip -r deploy/venuebook-backend.zip . -x ".git/*" ".github/*" "node_modules/*" "tests/*" "storage/logs/*" "*.md" "*.lock"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
