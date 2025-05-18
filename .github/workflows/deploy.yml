@@ -22,12 +22,9 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader
 
-#      - name: Run tests
-#        run: php artisan test
-
       - name: Create deployment artifact
         run: |
-          zip -r venuebook-backend.zip . -x ".git/*" ".github/*" "node_modules/*" "vendor/*" "*.md" "*.lock"
+          zip -r venuebook-backend.zip . -x ".git/*" ".github/*" "node_modules/*" "*.md" "*.lock"
           mkdir -p deploy
           mv venuebook-backend.zip deploy/
 
@@ -36,7 +33,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: eu-north-1
 
       - name: Deploy to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v21
@@ -48,4 +45,4 @@ jobs:
           version_label: ${{ github.sha }}
           region: eu-north-1
           deployment_package: deploy/venuebook-backend.zip
-          use_existing_version_if_available: true
+          wait_for_deployment: true
