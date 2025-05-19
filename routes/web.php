@@ -32,6 +32,11 @@ Route::get('/', function () {
         'security' => [
             'authentication' => 'Bearer Token',
         ],
+
+        'test' => [
+            'status' => 'ok',
+            'message' => 'Test route is working!',
+        ],
     ]);
 });
 
