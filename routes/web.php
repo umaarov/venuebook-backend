@@ -10,7 +10,6 @@ Route::get('/', function () {
         ],
         'documentation' => url('/swagger'),
         'repo' => 'https://github.com/umaarov/venuebook-backend',
-
         'version' => '1.0.0',
         'framework' => 'Laravel',
         'framework_version' => app()->version(),
@@ -35,7 +34,7 @@ Route::get('/', function () {
 
         'test' => [
             'status' => 'ok',
-            'message' => 'Test route is working!',
+            'message' => 'Test route is working! ..',
         ],
     ]);
 });
