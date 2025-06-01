@@ -19,7 +19,8 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://venuebook-frontend.s3-website.eu-north-1.amazonaws.com'],
+//    'allowed_origins' => ['http://venuebook-frontend.s3-website.eu-north-1.amazonaws.com'],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 

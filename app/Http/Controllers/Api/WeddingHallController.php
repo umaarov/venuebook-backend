@@ -31,7 +31,7 @@ class WeddingHallController extends Controller
 
     public function index(Request $request)
     {
-        $query = WeddingHall::with(['district', 'primaryImage', 'owner']);
+        $query = WeddingHall::with(['district', 'images', 'owner']);
         $user = Auth::user();
 
         if ($user) {
