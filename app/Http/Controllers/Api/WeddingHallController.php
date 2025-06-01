@@ -55,6 +55,14 @@ class WeddingHallController extends Controller
             $query->where('district_id', $request->district_id);
         }
 
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('address', 'LIKE', '%' . $searchTerm . '%');
+            });
+        }
+
         $validSortColumns = ['name', 'capacity', 'price_per_seat', 'created_at', 'status'];
         $sortBy = $request->input('sort_by', 'created_at');
         $sortDirection = $request->input('sort_direction', 'desc');
